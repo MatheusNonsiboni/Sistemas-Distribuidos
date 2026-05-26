@@ -1,0 +1,15 @@
+services:
+  spark-worker-2:
+    image: quay.io/jupyter/pyspark-notebook:spark-3.5.1
+    container_name: spark-worker-2
+    hostname: spark-worker-2
+    user: root
+    entrypoint: ["/usr/local/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://191.52.94.113:7077"]
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+      - PYSPARK_PYTHON=/opt/conda/bin/python3
+      - PYSPARK_DRIVER_PYTHON=/opt/conda/bin/python3
+    ports:
+      - "8082:8081"
