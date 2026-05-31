@@ -1,86 +1,110 @@
 # Análise Global de Mudanças Climáticas — Spark Big Data
 **Disciplina:** Sistemas Distribuídos 2026  
-**Stack:** Docker · PySpark 3.5 · Jupyter Lab · MLlib
+**Alunos:** Livia Kouketsu da Silva e Matheus Henrique Nosiboni  
+**Stack:** Docker · PySpark 3.5.1 · Jupyter Lab · MLlib
 
 ---
 
 ## Estrutura do Projeto
 
 ```
-spark-climate/
-├── docker-compose.yml          # Cluster: 1 Master + 2 Workers + Jupyter
-├── setup.sh                    # Script de setup inicial
-├── data/                       # ← Coloque os CSVs aqui
+projeto-spark/
+├── dados/                          # CSVs de entrada (não versionados)
 │   ├── GlobalLandTemperaturesByCity.csv
 │   └── owid-co2-data.csv
 ├── notebooks/
-│   ├── analise_climatica.py    # Pipeline principal (8 perguntas)
-│   └── visualizacoes.py        # Gráficos com matplotlib
-└── output/                     # Resultados gerados pelo Spark
-    ├── p1_decadal_avg/
-    ├── p2_hottest_years/
-    ├── ...
-    ├── dataset_final.parquet
-    └── graficos/
+│   ├── analise_climatica.py        # Pipeline principal — 8 perguntas
+│   └── visualizacoes.py            # Gráficos com matplotlib/seaborn
+├── output/                         # Resultados gerados pelo Spark
+│   ├── p1_decadal_avg/
+│   ├── p2_hottest_years/
+│   ├── p3_unstable_cities/
+│   ├── p6_co2_temp_join/
+│   ├── p7_thermal_accel/
+│   ├── p8_forecast/
+│   ├── dataset_final.parquet
+│   └── graficos/
+├── docker-compose.yml              # Cluster Master + Worker-1 + Jupyter
+└── docker-compose-worker.yml       # Worker-2 (PC da colega)
 ```
 
 ---
 
-## Passo a Passo
+## Datasets
 
-### 1. Baixar os datasets
-
-| Dataset | Link | Arquivo |
-|---------|------|---------|
+| Dataset | Fonte | Arquivo |
+|---------|-------|---------|
 | Temperaturas Berkeley Earth | [Kaggle](https://www.kaggle.com/datasets/berkeleyearth/climate-change-earth-surface-temperature-data) | `GlobalLandTemperaturesByCity.csv` |
-| Emissões CO₂ | [GitHub owid](https://github.com/owid/co2-data) | `owid-co2-data.csv` |
+| Emissões de CO₂ | [Our World in Data](https://github.com/owid/co2-data) | `owid-co2-data.csv` |
 
-Salve ambos em `./data/`.
-
-### 2. Subir o cluster
-
-```bash
-chmod +x setup.sh && ./setup.sh
-docker-compose up -d
-```
-
-### 3. Acessar o Jupyter Lab
-
-Abra `http://localhost:8888` no navegador.  
-Token: aparece no log do container (`docker logs jupyter-spark`).
-
-### 4. Executar o pipeline
-
-No Jupyter Lab, abra um terminal e rode:
-
-```bash
-cd /home/jovyan/work
-python analise_climatica.py
-```
-
-Depois gere os gráficos:
-
-```bash
-pip install matplotlib seaborn
-python visualizacoes.py
-```
-
-### 5. Monitorar no Spark UI
-
-- **Master UI:** http://localhost:8080
-- **Application UI (DAG/Stages):** http://localhost:4040
+Salve os dois arquivos em `./dados/` antes de subir o cluster.
 
 ---
 
 ## Arquitetura do Cluster
 
-| Componente | Configuração |
-|-----------|-------------|
-| Spark Master | 1 nó — porta 7077 |
-| Spark Worker 1 | 2 cores · 2 GB RAM |
-| Spark Worker 2 | 2 cores · 2 GB RAM |
-| Driver (Jupyter) | 1 GB RAM |
-| Spark Version | 3.5 |
+| Componente | Imagem Docker | Configuração |
+|-----------|---------------|-------------|
+| Spark Master | `quay.io/jupyter/pyspark-notebook:spark-3.5.1` | porta 7077 · UI: 8080 |
+| Spark Worker-1 | `quay.io/jupyter/pyspark-notebook:spark-3.5.1` | 2 cores · 2 GB RAM |
+| Spark Worker-2 | `quay.io/jupyter/pyspark-notebook:spark-3.5.1` | 2 cores · 2 GB RAM (PC externo) |
+| Jupyter Driver | `quay.io/jupyter/pyspark-notebook:spark-3.5.1` | porta 8888 · UI: 4040 |
+
+A mesma imagem é usada em todos os containers para garantir compatibilidade de versão do Python e do PySpark entre Driver e Executors.
+
+---
+
+## Passo a Passo
+
+### 1. Subir o cluster (PC Master)
+
+```powershell
+docker-compose up -d
+```
+
+### 2. Subir o Worker externo (PC da colega)
+
+Edite o IP em `docker-compose-worker.yml` para o IP atual do PC Master e rode:
+
+```powershell
+docker-compose -f docker-compose-worker.yml up -d
+```
+
+### 3. Confirmar o cluster
+
+Acesse `http://localhost:8080` — devem aparecer **3 Workers** com status ALIVE.
+
+### 4. Obter o token do Jupyter
+
+```powershell
+docker logs jupyter-spark 2>&1 | Select-String "token="
+```
+
+Acesse `http://localhost:8888` com o token exibido.
+
+### 5. Executar o pipeline
+
+No terminal do Jupyter Lab:
+
+```bash
+cd work
+python analise_climatica.py
+```
+
+### 6. Gerar os gráficos
+
+```bash
+python visualizacoes.py
+```
+
+Os gráficos são salvos em `output/graficos/`.
+
+### 7. Monitorar no Spark UI
+
+| Interface | URL | Disponível |
+|-----------|-----|-----------|
+| Master UI (Workers) | http://localhost:8080 | Sempre |
+| Application UI (DAG/Stages) | http://localhost:4040 | Somente durante execução |
 
 ---
 
@@ -92,23 +116,23 @@ python visualizacoes.py
 | Conversão de tipos | `to_date()` + `year()` / `month()` | Permitir `groupBy` por período |
 | Filtro de incerteza | `filter(col < 1.5)` | Medições imprecisas distorcem médias |
 | Filtro de período | `filter(Year >= 1900)` | Dados pré-1900 têm alta incerteza |
-| Limpeza de coords | `regexp_replace` + sinal negativo p/ S e W | Necessário para análise geográfica |
-| Normalização países | `trim()` + `regexp_replace()` | Chave do Join com CO₂ |
+| Limpeza de coords | `regexp_replace` + sinal negativo p/ S e W | Filtros geográficos da Pergunta 4 |
+| Normalização países | `trim()` + `regexp_replace()` | Chave do JOIN com CO₂ |
 | Cache | `.cache()` após limpeza | Evita releitura do CSV em cada query |
 
 ---
 
-## Perguntas e Técnicas
+## Perguntas e Técnicas Spark
 
-| # | Pergunta | Técnica Spark |
-|---|---------|--------------|
-| 1 | Temperatura por década | `groupBy` · `avg` · `Window` |
-| 2 | Anos mais quentes por continente | `rank()` Window Function |
-| 3 | Cidades mais instáveis | `stddev()` + filtro de registros |
-| 4 | Correlação Min × Max tropicais | MLlib `Correlation` |
-| 5 | Qualidade dos dados | `count` + threshold dinâmico |
+| # | Pergunta | Técnica Principal |
+|---|---------|------------------|
+| 1 | Temperatura média por década | `groupBy` + `avg` duplo |
+| 2 | 10 anos mais quentes por continente | `rank()` Window Function |
+| 3 | Cidades com maior instabilidade | `stddev()` + filtro de registros |
+| 4 | Correlação Min × Max (trópicos) | MLlib `Correlation` + `VectorAssembler` |
+| 5 | Qualidade dos dados | threshold dinâmico + `count` |
 | 6 | CO₂ × Temperatura (Join) | `join` + MLlib `Correlation` |
-| 7 | Aceleração térmica | `lag()` Window Function |
+| 7 | Aceleração térmica por país | `lag()` Window Function |
 | 8 | Previsão de temperatura | MLlib `LinearRegression` |
 
 ---
@@ -117,12 +141,12 @@ python visualizacoes.py
 
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
-| `dt` | Date | Data da medição (YYYY-MM-DD) |
-| `Year` | Int | Ano extraído de `dt` |
-| `Month` | Int | Mês extraído de `dt` |
-| `City` | String | Nome da cidade |
-| `Country` | String | Nome do país (normalizado) |
-| `AverageTemperature` | Double | Temperatura média mensal (°C) |
-| `AverageTemperatureUncertainty` | Double | Margem de erro (°C) |
-| `Lat` | Double | Latitude numérica (S negativo) |
-| `Lon` | Double | Longitude numérica (W negativo) |
+| `dt` | Date | Data da medição original (YYYY-MM-DD) |
+| `Year` | Int | Ano extraído da coluna `dt` |
+| `Month` | Int | Mês extraído da coluna `dt` |
+| `City` | String | Nome da cidade (grafia original do dataset) |
+| `Country` | String | Nome do país normalizado (trim + regexp_replace) |
+| `AverageTemperature` | Double | Temperatura média mensal em graus Celsius |
+| `AverageTemperatureUncertainty` | Double | Margem de erro da medição em graus Celsius |
+| `Lat` | Double | Latitude numérica — Sul é negativo (ex: -23.5) |
+| `Lon` | Double | Longitude numérica — Oeste é negativo (ex: -46.6) |

@@ -141,7 +141,7 @@ df_p2 = (df_clean
     .filter(F.col("rank") <= 10)
     .orderBy("Continent", "rank"))
 
-df_p2.show(50)
+df_p2.show(df_p2.count(), truncate=False)
 df_p2.coalesce(1).write.mode("overwrite").csv("/opt/output/p2_hottest_years", header=True)
 # PERGUNTA 3 — Cidades com Maior Instabilidade Climática (último século)
 
