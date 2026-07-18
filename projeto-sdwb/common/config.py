@@ -1,0 +1,12 @@
+# Único endereço fixo do sistema. Todo o resto é descoberto em runtime.
+NAME_SERVICE_HOST = "127.0.0.1"
+NAME_SERVICE_PORT = 9000
+
+BOARD_COORDINATOR_NAME = "board_coordinator"
+
+HEARTBEAT_INTERVAL = 2.0
+HEARTBEAT_TIMEOUT = 5.0
+ELECTION_OK_TIMEOUT = 3.0
+TX_VOTE_TIMEOUT = 4.0
+
+LISTEN_BACKLOG = 10
