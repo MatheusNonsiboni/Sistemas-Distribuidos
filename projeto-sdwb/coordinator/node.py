@@ -32,7 +32,6 @@ class PeerInfo:
     def __repr__(self):
         return f"PeerInfo(id={self.node_id}, {self.ip}:{self.porta})"
 
-
 class Node:
     def __init__(self, ip: str, porta: int,
                  on_become_coordinator: Callable[[], None] | None = None,

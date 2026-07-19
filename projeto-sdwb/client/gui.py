@@ -31,9 +31,22 @@ def listar_quadros() -> list[dict]:
         return stream.recv()["payload"]["resultados"]
 
 
+def sugerir_ip_local() -> str:
+    # não faz uma conexão de fato: só usa um socket UDP para o SO resolver
+    # qual seria a interface de saída para uma rede externa, e lê o IP dela.
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except OSError:
+        return "127.0.0.1"
+
+
 def porta_livre_aleatoria() -> int:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("127.0.0.1", 0))
+    s.bind(("0.0.0.0", 0))
     porta = s.getsockname()[1]
     s.close()
     return porta
@@ -45,9 +58,20 @@ class TelaInicial(tk.Frame):
         self.on_quadro_pronto = on_quadro_pronto
 
         tk.Label(self, text="Shared Distributed Write Board", font=("Helvetica", 16, "bold")).pack(pady=(0, 4))
-        tk.Label(self, text="Sistemas Distribuídos — Projeto Final", font=("Helvetica", 10)).pack(pady=(0, 20))
+        tk.Label(self, text="Sistemas Distribuídos — Projeto Final", font=("Helvetica", 10)).pack(pady=(0, 16))
+
+        frame_ip = tk.Frame(self)
+        frame_ip.pack(pady=(0, 16))
+        tk.Label(frame_ip, text="Meu IP nesta rede:").pack(side="left")
+        self.ip_var = tk.StringVar(value=sugerir_ip_local())
+        tk.Entry(frame_ip, textvariable=self.ip_var, width=16).pack(side="left", padx=6)
+        tk.Label(frame_ip, text="(mesma máquina: deixe 127.0.0.1)", fg="#666", font=("Helvetica", 8)).pack(side="left")
+
         tk.Button(self, text="CRIAR NOVO QUADRO", width=30, height=2, command=self._criar_quadro).pack(pady=6)
         tk.Button(self, text="INGRESSAR EM QUADRO EXISTENTE", width=30, height=2, command=self._ingressar_quadro).pack(pady=6)
+
+    def _meu_ip(self) -> str:
+        return self.ip_var.get().strip() or "127.0.0.1"
 
     def _criar_quadro(self) -> None:
         nome = simpledialog.askstring("Novo quadro", "Nome do novo quadro:", parent=self)
@@ -55,8 +79,9 @@ class TelaInicial(tk.Frame):
             return
         client_id = simpledialog.askstring("Identificação", "Seu nome de usuário:", parent=self) or f"user-{random.randint(1000, 9999)}"
 
+        meu_ip = self._meu_ip()
         porta = porta_livre_aleatoria()
-        coord = BoardCoordinatorServer("127.0.0.1", porta, nome)
+        coord = BoardCoordinatorServer(meu_ip, porta, nome)
         try:
             coord.start(is_initial_coordinator=True)
         except OSError as e:
@@ -80,8 +105,9 @@ class TelaInicial(tk.Frame):
     def _on_quadro_escolhido(self, quadro: dict) -> None:
         client_id = simpledialog.askstring("Identificação", "Seu nome de usuário:", parent=self) or f"user-{random.randint(1000, 9999)}"
 
+        meu_ip = self._meu_ip()
         porta = porta_livre_aleatoria()
-        coord = BoardCoordinatorServer("127.0.0.1", porta, quadro["nome"])
+        coord = BoardCoordinatorServer(meu_ip, porta, quadro["nome"])
         try:
             coord.start(is_initial_coordinator=False)
         except OSError as e:
@@ -92,7 +118,7 @@ class TelaInicial(tk.Frame):
             with socket.create_connection((quadro["ip"], quadro["porta"]), timeout=4.0) as s:
                 stream = MessageStream(s)
                 stream.send(make_message(JOIN_BOARD, str(porta), {
-                    "client_id": client_id, "node_id": porta, "ip": "127.0.0.1", "porta": porta,
+                    "client_id": client_id, "node_id": porta, "ip": meu_ip, "porta": porta,
                 }))
                 accepted = stream.recv()
                 state = stream.recv()

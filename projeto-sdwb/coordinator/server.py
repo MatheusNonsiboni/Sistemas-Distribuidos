@@ -30,6 +30,7 @@ from common.protocol import (
 from coordinator.board_state import BoardState, ObjetoJaTravado, ObjetoInexistente
 from coordinator.node import Node, PeerInfo
 
+
 class BoardCoordinatorServer:
     def __init__(self, ip: str, porta: int, board_name: str, ui_callback=None):
         self.board_name = board_name
@@ -144,7 +145,7 @@ class BoardCoordinatorServer:
         membros.append(PeerInfo(self.node.node_id, self.node.ip, self.node.porta).as_dict())
         self._broadcast(make_message(MEMBER_LIST, str(self.node.node_id), {"membros": membros}))
 
-    # desenho
+    # desenho 
 
     def _handle_draw_line(self, msg: dict, stream: MessageStream) -> None:
         payload = msg["payload"]
@@ -166,7 +167,7 @@ class BoardCoordinatorServer:
         self._broadcast(make_message(OBJECT_CREATED, str(self.node.node_id), {"objeto": obj}), exceto=msg.get("from"))
         self._notify_ui("object_created", {"objeto": obj})
 
-    # exclusão mútua
+    # exclusão mútua 
 
     def _handle_select_request(self, msg: dict, stream: MessageStream) -> None:
         payload = msg["payload"]
@@ -226,7 +227,7 @@ class BoardCoordinatorServer:
         return (coord is not None and str(coord.node_id) == str(msg.get("from"))
                 and not self.node.is_coordinator())
 
-    # transações 2PC 
+    # transações 2PC
 
     def _handle_tx_begin(self, msg: dict, stream: MessageStream) -> None:
         payload = msg["payload"]
@@ -290,7 +291,7 @@ class BoardCoordinatorServer:
             return
         self._notify_ui("tx_aborted", msg["payload"])
 
-    # recuperação de estado pós-eleição
+    # recuperação de estado pós-eleição 
 
     def _handle_state_request(self, msg: dict, stream: MessageStream) -> None:
         stream.send(make_message(STATE_REPLY, str(self.node.node_id), {
@@ -334,7 +335,7 @@ class BoardCoordinatorServer:
             pass
         return None
 
-    # broadcast
+    # broadcast 
 
     def _broadcast(self, msg: dict, exceto: str | None = None) -> None:
         for peer in self.node.known_peers():
@@ -353,7 +354,8 @@ def main():
     import sys
     import time
     porta = int(sys.argv[1]) if len(sys.argv) > 1 else 9100
-    server = BoardCoordinatorServer("127.0.0.1", porta, config.BOARD_COORDINATOR_NAME)
+    ip = sys.argv[2] if len(sys.argv) > 2 else "127.0.0.1"
+    server = BoardCoordinatorServer(ip, porta, config.BOARD_COORDINATOR_NAME)
     server.start(is_initial_coordinator=True)
     print("Coordenador rodando. Ctrl+C para encerrar.")
     try:

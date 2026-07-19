@@ -18,7 +18,7 @@ class BoardState:
         self._transactions: dict[str, dict] = {}
         self._tx_counter = itertools.count(1)
 
-    # objetos
+    # objetos 
 
     def novo_obj_id(self) -> str:
         return f"obj-{next(self._id_counter)}"

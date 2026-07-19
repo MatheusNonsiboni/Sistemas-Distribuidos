@@ -4,7 +4,6 @@ Projeto final de Sistemas Distribuídos: quadro branco colaborativo distribuído
 sem servidor fixo, com descoberta via Serviço de Nomes e coordenação via um
 nó migrante eleito pelo algoritmo Bully.
 
-
 ## Requisitos
 
 - Python 3.10 ou superior
@@ -40,6 +39,77 @@ Na tela inicial, escolha:
   os quadros disponíveis e conecta ao escolhido. O novo cliente recebe
   imediatamente todos os desenhos já feitos.
 
+## Executando com dois ou mais computadores
+
+O sistema funciona tanto numa única máquina (tudo via `127.0.0.1`, o padrão)
+quanto em várias máquinas na mesma rede local (Wi-Fi ou cabo). Para várias
+máquinas, siga os passos abaixo.
+
+### 1. Descubra o IP de cada máquina na rede local
+
+- **Windows**: abra o `cmd` e rode `ipconfig`. Use o "Endereço IPv4" da
+  rede em uso (Wi-Fi ou Ethernet), algo como `192.168.0.x` ou `10.0.0.x`.
+- **Linux/Mac**: rode `ip a` ou `ifconfig` no terminal.
+
+Todas as máquinas precisam estar na **mesma rede** (mesmo Wi-Fi, por
+exemplo — rede de convidados costuma isolar os dispositivos entre si e
+não funciona).
+
+### 2. Escolha uma máquina para hospedar o Serviço de Nomes
+
+Essa máquina roda o Serviço de Nomes normalmente:
+
+```
+python -m name_service.server
+```
+
+Anote o IP dela (ex.: `192.168.0.10`) — todas as outras máquinas vão
+precisar apontar para ele.
+
+### 3. Nas demais máquinas, aponte para o IP do Serviço de Nomes
+
+Antes de abrir a GUI, defina a variável de ambiente com o IP anotado no
+passo 2:
+
+**Windows (cmd):**
+```
+set SDWB_NAME_SERVICE_HOST=192.168.0.10
+python -m client.gui
+```
+
+**Windows (PowerShell):**
+```
+$env:SDWB_NAME_SERVICE_HOST="192.168.0.10"
+python -m client.gui
+```
+
+**Linux/Mac:**
+```
+SDWB_NAME_SERVICE_HOST=192.168.0.10 python -m client.gui
+```
+
+> Na própria máquina que hospeda o Serviço de Nomes, isso não é
+> necessário — o padrão (`127.0.0.1`) já funciona para ela mesma.
+
+### 4. Na tela inicial da GUI, confirme o campo "Meu IP nesta rede"
+
+O campo já vem preenchido com uma sugestão automática do IP local da
+máquina. Confira se bate com o IP descoberto no passo 1 (se a máquina
+tiver mais de uma interface de rede — Wi-Fi e cabo ao mesmo tempo, por
+exemplo — a sugestão pode escolher a errada; ajuste manualmente se for
+o caso). Esse é o IP que os outros nós vão usar para contatar este
+cliente/coordenador, então precisa ser o IP real na rede, nunca
+`127.0.0.1` quando a máquina não é a mesma que a de quem vai se conectar.
+
+### 5. Firewall
+
+Se uma máquina não conseguir enxergar as outras, o motivo mais comum é o
+firewall do Windows bloqueando conexões de entrada em portas Python. Ao
+rodar `python -m name_service.server` ou `python -m client.gui` pela
+primeira vez, o Windows normalmente pergunta se deve permitir o acesso —
+escolha **Permitir** (redes privadas). Se não perguntar, pode ser preciso
+liberar manualmente em Firewall do Windows Defender → Configurações
+avançadas → Regra de Entrada.
 
 ## Cenários de demonstração obrigatórios
 
@@ -66,7 +136,6 @@ todos os desenhos.
 > **Nota de timing:** a detecção de falha depende do heartbeat (intervalo
 > de 2s, timeout de 5s) mais o tempo de eleição. Espere aproximadamente
 > 8–10 segundos entre matar o Coordenador e tentar usar o sistema
-> novamente — isso é esperado e pode ser mencionado no relatório.
 
 ## Estrutura do projeto
 
@@ -75,6 +144,7 @@ sdwb/
 ├── common/
 │   ├── protocol.py      protocolo de mensagens (JSON + '\n')
 │   └── config.py        portas, timeouts, endereço do Serviço de Nomes
+│                         (configurável via SDWB_NAME_SERVICE_HOST)
 ├── name_service/
 │   └── server.py        "páginas amarelas": tabela (nome, IP, porta)
 ├── coordinator/

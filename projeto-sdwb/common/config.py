@@ -1,5 +1,6 @@
-# Único endereço fixo do sistema. Todo o resto é descoberto em runtime.
-NAME_SERVICE_HOST = "127.0.0.1"
+import os
+
+NAME_SERVICE_HOST = os.environ.get("SDWB_NAME_SERVICE_HOST", "127.0.0.1")
 NAME_SERVICE_PORT = 9000
 
 BOARD_COORDINATOR_NAME = "board_coordinator"
