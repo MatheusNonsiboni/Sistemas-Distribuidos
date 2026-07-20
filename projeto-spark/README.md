@@ -1,9 +1,10 @@
 # Análise Global de Mudanças Climáticas — Spark Big Data
 **Disciplina:** Sistemas Distribuídos 2026  
-**Alunos:** Livia Kouketsu da Silva e Matheus Henrique Nosiboni  
 **Stack:** Docker · PySpark 3.5.1 · Jupyter Lab · MLlib
 
----
+## Autores 
+
+Implementação desenvolvida por mim; relatório e análise de resultados desenvolvidos em conjunto com Livia Kouketsu da Silva.
 
 ## Estrutura do Projeto
 
@@ -28,8 +29,6 @@ projeto-spark/
 └── docker-compose-worker.yml       # Worker-2 (PC da colega)
 ```
 
----
-
 ## Datasets
 
 | Dataset | Fonte | Arquivo |
@@ -38,8 +37,6 @@ projeto-spark/
 | Emissões de CO₂ | [Our World in Data](https://github.com/owid/co2-data) | `owid-co2-data.csv` |
 
 Salve os dois arquivos em `./dados/` antes de subir o cluster.
-
----
 
 ## Arquitetura do Cluster
 
@@ -51,8 +48,6 @@ Salve os dois arquivos em `./dados/` antes de subir o cluster.
 | Jupyter Driver | `quay.io/jupyter/pyspark-notebook:spark-3.5.1` | porta 8888 · UI: 4040 |
 
 A mesma imagem é usada em todos os containers para garantir compatibilidade de versão do Python e do PySpark entre Driver e Executors.
-
----
 
 ## Passo a Passo
 
@@ -106,8 +101,6 @@ Os gráficos são salvos em `output/graficos/`.
 | Master UI (Workers) | http://localhost:8080 | Sempre |
 | Application UI (DAG/Stages) | http://localhost:4040 | Somente durante execução |
 
----
-
 ## ETL — Limpeza Realizada
 
 | Etapa | Técnica PySpark | Motivo |
@@ -119,8 +112,6 @@ Os gráficos são salvos em `output/graficos/`.
 | Limpeza de coords | `regexp_replace` + sinal negativo p/ S e W | Filtros geográficos da Pergunta 4 |
 | Normalização países | `trim()` + `regexp_replace()` | Chave do JOIN com CO₂ |
 | Cache | `.cache()` após limpeza | Evita releitura do CSV em cada query |
-
----
 
 ## Perguntas e Técnicas Spark
 
@@ -134,8 +125,6 @@ Os gráficos são salvos em `output/graficos/`.
 | 6 | CO₂ × Temperatura (Join) | `join` + MLlib `Correlation` |
 | 7 | Aceleração térmica por país | `lag()` Window Function |
 | 8 | Previsão de temperatura | MLlib `LinearRegression` |
-
----
 
 ## Dicionário do Parquet Final
 
